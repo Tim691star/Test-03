@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词学习系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+            margin: 0;
+        }
+
+        .main-tabs {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #4CAF50;
+        }
+
+        .main-tab {
+            padding: 10px 30px;
+            font-size: 16px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .main-tab.active {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .input-section {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .words-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .word-container {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: inline-flex;
+            flex-direction: column;
+            width: auto;
+            min-width: 200px;
+            max-width: 100%;
+            cursor: pointer;
+        }
+
+        .word-container.highlight {
+            background-color: #e3f2fd;
+            border: 2px solid #2196f3;
+        }
+
+        .word-item {
+            margin-bottom: 8px;
+            width: 100%;
+        }
+
+        .word {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .meaning {
+            color: #666;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s ease;
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .group-b {
+            color: #888;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #learning-section, #management-section {
+            display: none;
+        }
+
+        #learning-section.active, #management-section.active {
+            display: block;
+        }
+
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .dialog {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .edit-dialog {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            min-width: 500px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .edit-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .edit-table th,
+        .edit-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .edit-table input {
+            width: 100%;
+            padding: 4px;
+            border: none;
+            outline: none;
+        }
+
+        .add-row-button {
+            width: 100%;
+            text-align: center;
+            padding: 5px;
+            background: #f5f5f5;
+            cursor: pointer;
+            border: 1px dashed #ddd;
+        }
+
+        .add-row-button:hover {
+            background: #e0e0e0;
+        }
+
+        .edit-dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .edit-dialog-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .word-container {
+            position: relative;
+        }
+
+        .word-container .context-menu {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            cursor: pointer;
+            padding: 5px;
+            visibility: hidden;
+        }
+
+        .word-container:hover .context-menu {
+            visibility: visible;
+        }
+
+        .edit-table textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            resize: vertical;
+            font-family: inherit;
+            font-size: inherit;
+        }
+
+        .edit-table td {
+            min-width: 200px;
+            vertical-align: top;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-tabs">
+        <button class="main-tab" onclick="switchMainTab('learning')">学习界面</button>
+        <button class="main-tab" onclick="switchMainTab('management')">数据管理</button>
+    </div>
+
+    <div id="learning-section">
+        <h1>建设中。。。单击右击多点点</h1>
+        <div class="button-container">
+            <button id="toggle-all-btn" onclick="toggleAllMeanings()">中文</button>
+            <button id="toggle-groups-btn" onclick="toggleGroups()">切换</button>
+        </div>
+        <div class="words-section" id="group-a"></div>
+        <div class="words-section" id="group-b" class="hidden"></div>
+    </div>
+
+    <div id="management-section">
+        <h1>数据管理</h1>
+        <div class="container">
+            <div class="input-section">
+                <div id="single-input" class="input-form">
+                    <div class="input-group">
+                        <label>英文单词/词组：</label>
+                        <input type="text" id="single-word" placeholder="输入英文单词或词组">
+                    </div>
+                    <div class="input-group">
+                        <label>中文释义：</label>
+                        <input type="text" id="single-meaning" placeholder="输入中文释义">
+                    </div>
+                    <button onclick="addSingleEntry()">添加</button>
+                </div>
+                <button onclick="showBulkInputDialog()">批量输入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 重复内容检查弹窗 -->
+    <div class="dialog-overlay" id="dialogOverlay">
+        <div class="dialog">
+            <p>学习界面已存在相似内容</p>
+            <div class="dialog-buttons">
+                <button onclick="handleExistingWord('modify')">去修改</button>
+                <button onclick="handleExistingWord('add')">继续添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑表格弹窗 -->
+    <div class="dialog-overlay" id="editDialogOverlay">
+        <div class="edit-dialog">
+            <div class="edit-dialog-header">
+                <h3>编辑内容</h3>
+                <button onclick="saveAndCloseEditDialog()">保存</button>
+            </div>
+            <div id="editTableContainer">
+                <table class="edit-table" id="editTable">
+                    <thead>
+                        <tr>
+                            <th>英文</th>
+                            <th>中文</th>
+                        </tr>
+                    </thead>
+                    <tbody id="editTableBody">
+                        <!-- 动态添加行 -->
+                    </tbody>
+                </table>
+                <div class="add-row-button" onclick="addTableRow()">+ 添加行</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量输入对话框 -->
+    <div class="dialog-overlay" id="bulkInputDialog">
+        <div class="edit-dialog">
+            <div class="edit-dialog-header">
+                <h3>批量输入</h3>
+                <p style="color: #666; font-size: 14px;">每行输入格式：英文 中文</p>
+            </div>
+            <textarea id="bulkInput" 
+                      style="width: 100%; height: 300px; margin: 10px 0; padding: 10px; border: 1px solid #ddd;"
+                      placeholder="例如：
+hello 你好
+good morning 早上好
+nice to meet you 很高兴见到你"></textarea>
+            <div class="edit-dialog-buttons">
+                <button onclick="processBulkInput()">确认添加</button>
+                <button onclick="closeBulkInputDialog()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+// 全局变量
+let showingGroupA = true;
+        let currentSimilarWord = null;
+        let currentEditingContainer = null;
+
+        // 初始化
+        document.addEventListener("DOMContentLoaded", () => {
+            switchMainTab('learning');
+            setupContextMenu();
+            loadAllData(); // 加载保存的数据
+            addExportImportButtons(); // 添加这一行
+        });
+
+        // 设置右键菜单
+        function setupContextMenu() {
+            document.addEventListener('contextmenu', (e) => {
+                const container = e.target.closest('.word-container');
+                if (container) {
+                    e.preventDefault();
+                    openEditDialog(container);
+                }
+            });
+
+            // 点击空白处关闭编辑模式
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.edit-dialog') && 
+                    !e.target.closest('.dialog') && 
+                    document.getElementById('editDialogOverlay').style.display === 'flex') {
+                    saveAndCloseEditDialog();
+                }
+            });
+        }
+
+        function openEditDialog(container) {
+            currentEditingContainer = container;
+            container.classList.add('highlight');
+
+            // 获取当前容器中的内容
+            const wordItems = container.querySelectorAll('.word-item');
+            const words = [];
+            let meaning = '';
+            
+            wordItems.forEach(item => {
+                const wordEl = item.querySelector('.word');
+                const meaningEl = item.querySelector('.meaning');
+                
+                if (wordEl) {
+                    words.push(wordEl.textContent.trim());
+                } else if (meaningEl) {
+                    meaning = meaningEl.textContent.trim();
+                }
+            });
+
+            // 初始化表格
+            const tbody = document.getElementById('editTableBody');
+            tbody.innerHTML = '';
+
+            // 添加一行，包含所有单词和释义
+            addTableRow(words.join('\n'), meaning);
+
+            document.getElementById('editDialogOverlay').style.display = 'flex';
+        }
+
+        function addTableRow(word = '', meaning = '') {
+            const tbody = document.getElementById('editTableBody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><textarea class="word-input" rows="3">${word}</textarea></td>
+                <td><textarea class="meaning-input" rows="3">${meaning}</textarea></td>
+                <td style="width: 50px;">
+                    <button onclick="this.closest('tr').remove()" style="padding: 2px 8px;">删除</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function saveAndCloseEditDialog() {
+            if (!currentEditingContainer) return;
+
+            // 收集表格数据
+            const rows = document.getElementById('editTableBody').querySelectorAll('tr');
+            const newData = [];
+
+            rows.forEach(row => {
+                const wordInput = row.querySelector('.word-input');
+                const meaningInput = row.querySelector('.meaning-input');
+                
+                if (wordInput && meaningInput) {
+                    const words = wordInput.value.trim().split('\n').filter(w => w.trim());
+                    const meaning = meaningInput.value.trim();
+                    
+                    if (words.length > 0 && meaning) {
+                        newData.push({
+                            words: words,
+                            meaning: meaning
+                        });
+                    }
+                }
+            });
+
+            if (newData.length > 0) {
+                updateContainerContent(currentEditingContainer, newData);
+            } else {
+                currentEditingContainer.remove();
+            }
+
+            currentEditingContainer.classList.remove('highlight');
+            document.getElementById('editDialogOverlay').style.display = 'none';
+            currentEditingContainer = null;
+        }
+
+        function updateContainerContent(container, data) {
+            container.innerHTML = '';
+            
+            data.forEach(item => {
+                // 添加每个英文表达
+                item.words.forEach(word => {
+                    const wordItem = document.createElement('div');
+                    wordItem.className = 'word-item';
+                    
+                    const wordSpan = document.createElement('span');
+                    wordSpan.className = 'word';
+                    wordSpan.textContent = word;
+
+                    wordItem.appendChild(wordSpan);
+                    container.appendChild(wordItem);
+                });
+
+                // 添加中文释义
+                const meaningItem = document.createElement('div');
+                meaningItem.className = 'word-item';
+                
+                const meaningP = document.createElement('p');
+                meaningP.className = 'meaning';
+                meaningP.textContent = item.meaning;
+                meaningP.style.visibility = 'hidden';
+                meaningP.style.opacity = '0';
+
+                meaningItem.appendChild(meaningP);
+                container.appendChild(meaningItem);
+            });
+            
+            // 保存更新后的数据
+            saveAllData();
+        }
+
+        function switchMainTab(tab) {
+            document.querySelectorAll('.main-tab').forEach(t => {
+                t.classList.remove('active');
+            });
+            const clickedTab = document.querySelector(`.main-tab[onclick*="${tab}"]`);
+            if (clickedTab) clickedTab.classList.add('active');
+
+            document.getElementById('learning-section').classList.remove('active');
+            document.getElementById('management-section').classList.remove('active');
+            document.getElementById(`${tab}-section`).classList.add('active');
+        }
+        function addSingleEntry() {
+            const word = document.getElementById('single-word').value.trim();
+            const meaning = document.getElementById('single-meaning').value.trim();
+            
+            if (!word || !meaning) {
+                alert('请填写完整的单词和释义');
+                return;
+            }
+
+            // 检查是否存在相似内容
+            const similarContainer = checkSimilarWord(word);
+            if (similarContainer) {
+                currentSimilarWord = similarContainer;
+                showDialog();
+                return;
+            }
+
+            addWordToLearning(word, meaning);
+            clearInputs();
+        }
+
+        function checkSimilarWord(newWord) {
+            const containers = document.querySelectorAll('#group-a .word-container, #group-b .word-container');
+            return Array.from(containers).find(container => {
+                const words = Array.from(container.querySelectorAll('.word'))
+                    .map(el => el.textContent.toLowerCase());
+                return words.some(word => 
+                    word.includes(newWord.toLowerCase()) ||
+                    newWord.toLowerCase().includes(word)
+                );
+            });
+        }
+
+        function showDialog() {
+            document.getElementById('dialogOverlay').style.display = 'flex';
+        }
+
+        function hideDialog() {
+            document.getElementById('dialogOverlay').style.display = 'none';
+        }
+
+        function handleExistingWord(action) {
+            hideDialog();
+            
+            if (action === 'modify') {
+                switchMainTab('learning');
+                currentSimilarWord.scrollIntoView({ behavior: 'smooth' });
+                openEditDialog(currentSimilarWord);
+            } else if (action === 'add') {
+                const word = document.getElementById('single-word').value.trim();
+                const meaning = document.getElementById('single-meaning').value.trim();
+                addWordToLearning(word, meaning);
+            }
+
+            currentSimilarWord = null;
+            clearInputs();
+        }
+
+        function addWordToLearning(word, meaning) {
+            const container = createWordContainer([word], meaning, !showingGroupA);
+            
+            // 添加到当前显示的组
+            const targetGroup = showingGroupA ? 'group-a' : 'group-b';
+            document.getElementById(targetGroup).appendChild(container);
+            
+            // 保存数据
+            saveAllData();
+        }
+
+        function clearInputs() {
+            document.getElementById('single-word').value = '';
+            document.getElementById('single-meaning').value = '';
+        }
+
+        function toggleAllMeanings() {
+            const allMeanings = document.querySelectorAll('.meaning');
+            const isAnyMeaningVisible = Array.from(allMeanings).some(m => 
+                m.style.visibility === 'visible');
+
+            allMeanings.forEach(meaning => {
+                meaning.style.visibility = isAnyMeaningVisible ? 'hidden' : 'visible';
+                meaning.style.opacity = isAnyMeaningVisible ? '0' : '1';
+            });
+        }
+
+        function toggleGroups() {
+            const groupA = document.getElementById('group-a');
+            const groupB = document.getElementById('group-b');
+            
+            if (showingGroupA) {
+                groupA.classList.add('hidden');
+                groupB.classList.remove('hidden');
+            } else {
+                groupA.classList.remove('hidden');
+                groupB.classList.add('hidden');
+            }
+            
+            showingGroupA = !showingGroupA;
+        }
+
+        // 容器点击事件 - 在组之间移动
+        document.addEventListener('click', (e) => {
+            const container = e.target.closest('.word-container');
+            if (container && !e.target.closest('.edit-dialog')) {
+                const currentGroup = container.parentElement;
+                const isGroupA = currentGroup.id === 'group-a';
+                const targetGroup = document.getElementById(isGroupA ? 'group-b' : 'group-a');
+                
+                container.classList.toggle('group-b');
+                targetGroup.appendChild(container);
+                
+                // 保存移动后的数据
+                saveAllData();
+            }
+        });
+
+        function showBulkInputDialog() {
+            document.getElementById('bulkInputDialog').style.display = 'flex';
+        }
+
+        function closeBulkInputDialog() {
+            document.getElementById('bulkInputDialog').style.display = 'none';
+            document.getElementById('bulkInput').value = '';
+        }
+
+        function processBulkInput() {
+            const text = document.getElementById('bulkInput').value.trim();
+            if (!text) {
+                alert('请输入内容');
+                return;
+            }
+
+            const lines = text.split('\n');
+            let addedCount = 0;
+            let errorLines = [];
+
+            lines.forEach((line, index) => {
+                if (!line.trim()) return;
+                
+                // 使用正则表达式匹配中文字符
+                const chineseRegex = /[\u4e00-\u9fa5]/;
+                let firstChineseIndex = -1;
+                
+                // 查找第一个中文字符的位置
+                for (let i = 0; i < line.length; i++) {
+                    if (chineseRegex.test(line[i])) {
+                        firstChineseIndex = i;
+                        break;
+                    }
+                }
+
+                if (firstChineseIndex === -1) {
+                    errorLines.push(`第 ${index + 1} 行: ${line}`);
+                    return;
+                }
+
+                // 分割英文和中文部分
+                const word = line.substring(0, firstChineseIndex).trim();
+                const meaning = line.substring(firstChineseIndex).trim();
+
+                if (!word || !meaning) {
+                    errorLines.push(`第 ${index + 1} 行: ${line}`);
+                    return;
+                }
+
+                // 检查是否存在相似内容
+                const similarContainer = checkSimilarWord(word);
+                if (!similarContainer) {
+                    addWordToLearning(word, meaning);
+                    addedCount++;
+                }
+            });
+
+            // 显示处理结果
+            let message = `成功添加 ${addedCount} 个条目`;
+            if (errorLines.length > 0) {
+                message += `\n\n以下行格式有误或未能添加：\n${errorLines.join('\n')}`;
+            }
+            alert(message);
+            closeBulkInputDialog();
+        }
+
+        // 保存所有数据到 localStorage
+        function saveAllData() {
+            const groupA = document.getElementById('group-a');
+            const groupB = document.getElementById('group-b');
+            
+            const data = {
+                groupA: getGroupData(groupA),
+                groupB: getGroupData(groupB)
+            };
+            
+            localStorage.setItem('wordLearningData', JSON.stringify(data));
+        }
+
+        // 获取组内的所有数据
+        function getGroupData(group) {
+            const containers = group.querySelectorAll('.word-container');
+            return Array.from(containers).map(container => {
+                const words = Array.from(container.querySelectorAll('.word'))
+                    .map(word => word.textContent.trim());
+                const meaning = container.querySelector('.meaning')?.textContent.trim() || '';
+                
+                return {
+                    words: words,
+                    meaning: meaning
+                };
+            });
+        }
+
+        // 从 localStorage 加载数据
+        function loadAllData() {
+            const savedData = localStorage.getItem('wordLearningData');
+            if (!savedData) return;
+            
+            try {
+                const data = JSON.parse(savedData);
+                
+                // 清空现有内容
+                document.getElementById('group-a').innerHTML = '';
+                document.getElementById('group-b').innerHTML = '';
+                
+                // 恢复数据
+                data.groupA.forEach(item => {
+                    const container = createWordContainer(item.words, item.meaning, false);
+                    document.getElementById('group-a').appendChild(container);
+                });
+                
+                data.groupB.forEach(item => {
+                    const container = createWordContainer(item.words, item.meaning, true);
+                    document.getElementById('group-b').appendChild(container);
+                });
+            } catch (error) {
+                console.error('加载保存的数据时出错:', error);
+            }
+        }
+
+        // 创建单词容器
+        function createWordContainer(words, meaning, isGroupB) {
+            const container = document.createElement('div');
+            container.className = 'word-container';
+            if (isGroupB) {
+                container.classList.add('group-b');
+            }
+            
+            // 添加每个英文表达
+            words.forEach(word => {
+                const wordItem = document.createElement('div');
+                wordItem.className = 'word-item';
+                
+                const wordSpan = document.createElement('span');
+                wordSpan.className = 'word';
+                wordSpan.textContent = word;
+
+                wordItem.appendChild(wordSpan);
+                container.appendChild(wordItem);
+            });
+
+            // 添加中文释义
+            const meaningItem = document.createElement('div');
+            meaningItem.className = 'word-item';
+            
+            const meaningP = document.createElement('p');
+            meaningP.className = 'meaning';
+            meaningP.textContent = meaning;
+            meaningP.style.visibility = 'hidden';
+            meaningP.style.opacity = '0';
+
+            meaningItem.appendChild(meaningP);
+            container.appendChild(meaningItem);
+
+            return container;
+        }
+
+        // 在页面关闭前保存数据
+        window.addEventListener('beforeunload', () => {
+            saveAllData();
+        });
+
+        // 添加导出数据按钮到管理界面
+        function addExportImportButtons() {
+            const container = document.querySelector('.input-section');
+            const buttonGroup = document.createElement('div');
+            buttonGroup.style.marginTop = '20px';
+            buttonGroup.innerHTML = `
+                <button onclick="exportData()">导出数据</button>
+                <button onclick="document.getElementById('importFile').click()">导入数据</button>
+                <input type="file" id="importFile" style="display: none" accept=".json" onchange="importData(event)">
+            `;
+            container.appendChild(buttonGroup);
+        }
+
+        // 导出数据为JSON文件
+        function exportData() {
+            const data = {
+                groupA: getGroupData(document.getElementById('group-a')),
+                groupB: getGroupData(document.getElementById('group-b')),
+                version: '1.0',
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'word_learning_data.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 导入数据
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    // 验证数据格式
+                    if (!data.groupA || !data.groupB) {
+                        throw new Error('数据格式不正确');
+                    }
+
+                    // 询问用户是否要合并数据
+                    if (confirm('是否要合并现有数据？\n点击"确定"合并数据\n点击"取消"替换现有数据')) {
+                        // 合并数据
+                        mergeData(data);
+                    } else {
+                        // 替换数据
+                        replaceData(data);
+                    }
+                    
+                    // 保存并刷新显示
+                    saveAllData();
+                    loadAllData();
+                    
+                    alert('数据导入成功！');
+                } catch (error) {
+                    alert('导入失败：' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // 清除文件选择，允许重复导入同一文件
+        }
+
+        // 合并数据
+        function mergeData(newData) {
+            const currentData = {
+                groupA: getGroupData(document.getElementById('group-a')),
+                groupB: getGroupData(document.getElementById('group-b'))
+            };
+
+            // 合并 A 组数据
+            newData.groupA.forEach(item => {
+                if (!isWordExist(item.words[0], currentData.groupA)) {
+                    currentData.groupA.push(item);
+                }
+            });
+
+            // 合并 B 组数据
+            newData.groupB.forEach(item => {
+                if (!isWordExist(item.words[0], currentData.groupB)) {
+                    currentData.groupB.push(item);
+                }
+            });
+
+            // 保存合并后的数据
+            localStorage.setItem('wordLearningData', JSON.stringify(currentData));
+        }
+
+        // 替换数据
+        function replaceData(newData) {
+            localStorage.setItem('wordLearningData', JSON.stringify(newData));
+        }
+
+        // 检查单词是否已存在
+        function isWordExist(word, groupData) {
+            return groupData.some(item => 
+                item.words.some(w => 
+                    w.toLowerCase() === word.toLowerCase() ||
+                    w.toLowerCase().includes(word.toLowerCase()) ||
+                    word.toLowerCase().includes(w.toLowerCase())
+                )
+            );
+        }
+    </script>
+</body>
+</html>
